@@ -69,8 +69,9 @@ video{width:100%;border-radius:12px;background:#000;margin-top:8px}
     <p class="mut">Avisar cuántos días antes de que venza:</p>
     <select id="daysBefore"><option value="1">1 día antes</option><option value="2">2 días antes</option><option value="3">3 días antes</option></select>
     <button id="btnNotif" style="width:100%;margin-top:12px">🔔 Activar notificaciones</button>
-    <p class="mut">Esta es una versión de prueba: los datos se guardan solo en este celular. Las notificaciones push con la app cerrada y las cuentas por almacén vienen en la siguiente etapa.</p>
+    <p class="mut">Estos avisos funcionan con la app abierta. Para recibirlos con el celular bloqueado, une tu almacén más abajo.</p>
   </div>
+  <div class="card"><b>🏪 Mi almacén (varios celulares)</b><div id="storeBody"><p class="mut">Cargando…</p></div></div>
   <div class="card"><b>🔒 PIN de acceso</b><p class="mut">Pide un PIN al abrir la app. Es un freno básico: las cuentas reales por almacén vienen con el servidor.</p><button class="sec" id="setPin" style="width:100%">Crear / cambiar / quitar PIN</button></div>
   <div class="card"><b>📊 Resumen</b><p id="stats" class="mut"></p></div>
   <div class="card"><b>💾 Respaldo</b><p class="mut">Como los datos viven en este celular, copia un respaldo de vez en cuando.</p><div class="row"><button class="sec" id="bk">Copiar respaldo</button><button class="sec" id="rs">Restaurar</button></div></div>
@@ -132,13 +133,13 @@ function render(){
 }
 $("lista").addEventListener("click",function(e){
   var t=e.target.closest("button");if(!t)return;var id=t.dataset.id;
-  var a=t.dataset.a,snap=JSON.stringify(S);
+  var a=t.dataset.a,snap=JSON.stringify(S),hit=null;
   S.items.forEach(function(i){if(String(i.id)!==id)return;
-    if(a==="offer")i.offer=!i.offer;
+    hit=i;if(a==="offer")i.offer=!i.offer;
     if(a==="gone")S.sold=(S.sold||0)+i.qty;
     if(a==="waste")S.waste=(S.waste||0)+i.qty});
   if(a!=="offer")S.items=S.items.filter(function(i){return String(i.id)!==id});
-  save();render();toast({offer:"Oferta cambiada",gone:"Vendido ✔",waste:"Botado",del:"Producto quitado"}[a],snap);
+  save();render();toast({offer:"Oferta cambiada",gone:"Vendido ✔",waste:"Botado",del:"Producto quitado"}[a],snap);if(window.FB&&hit)FB.act(a,hit);
 });
 document.querySelectorAll("nav button").forEach(function(b){b.onclick=function(){
   document.querySelectorAll("nav button").forEach(function(x){x.classList.toggle("on",x===b)});
@@ -150,7 +151,7 @@ $("save").onclick=function(){
   var c=$("code").value.trim(),n=$("name").value.trim(),e=$("exp").value,q=parseInt($("qty").value)||1;
   if(!n||!e){$("scanMsg").textContent="Falta el nombre o la fecha de vencimiento.";return}
   var snap=JSON.stringify(S);if(c){S.cat[c]=n;S.life=S.life||{};S.life[c]=diff(e)}
-  S.items.push({id:Date.now(),code:c,name:n,exp:e,qty:q,loc:curLoc});
+  var it={id:Date.now(),code:c,name:n,exp:e,qty:q,loc:curLoc};S.items.push(it);if(window.FB){FB.add(it);if(c)FB.cat(c,n)}
   save();["code","name","exp","expt"].forEach(function(i){$(i).value=""});showExp();$("qty").value=1;
   $("scanMsg").textContent="Guardado ✔ Siguiente producto";render();toast("Guardado: "+n,snap);if(usedScan)$("btnScan").onclick();
 };
@@ -192,6 +193,9 @@ function parseExp(t){var s=t.replace(/\D/g,""),d,m,y;
   var x=new Date(y,m-1,d);if(m<1||m>12||x.getMonth()!==m-1||x.getDate()!==d)return "";return iso(x)}
 $("expt").addEventListener("input",function(){$("exp").value=parseExp(this.value);showExp()});
 function lookup(c){
+  if(window.FB){FB.getCat(c).then(function(n){if(n&&$("code").value.trim()===c&&!$("name").value){$("name").value=n;$("scanMsg").textContent="\u2705 "+n+" (cat\u00e1logo compartido). Pon la fecha.";$("expt").focus()}else lookupOFF(c)}).catch(function(){lookupOFF(c)});return}
+  lookupOFF(c)}
+function lookupOFF(c){
   function miss(){if($("code").value.trim()===c&&!$("name").value)$("scanMsg").textContent="Producto nuevo \ud83c\udd95 Escribe el nombre y la fecha."}
   if(!navigator.onLine||!/^\d{8,14}$/.test(c)){miss();return}
   var ctl=window.AbortController?new AbortController():null,tm=setTimeout(function(){if(ctl)ctl.abort()},5000);
@@ -204,7 +208,7 @@ function lookup(c){
   }).catch(miss)}
 function autoLife(c){if(S.life&&S.life[c]>0)setDays(S.life[c])}
 $("quick").addEventListener("click",function(e){var d=e.target.dataset.d;if(d)setDays(+d)});
-$("tund").onclick=function(){if(undoSnap){S=JSON.parse(undoSnap);save();setLoc(S.loc||"Tienda");render()}$("toast").style.display="none"};
+$("tund").onclick=function(){if(undoSnap){var bf=S.items;S=JSON.parse(undoSnap);save();setLoc(S.loc||"Tienda");render();if(window.FB)FB.resync(bf,S.items)}$("toast").style.display="none"};
 $("bk").onclick=function(){var t=JSON.stringify(S);try{navigator.clipboard.writeText(t).then(function(){alert("Respaldo copiado ✔ Pégalo en un chat o nota para guardarlo.")})}catch(e){prompt("Copia este texto:",t)}};
 $("rs").onclick=function(){var t=prompt("Pega aquí tu respaldo:");if(!t)return;try{var o=JSON.parse(t);if(o&&o.items){S=o;save();render();alert("Restaurado ✔")}}catch(e){alert("Ese texto no es un respaldo válido.")}};
 function lockCheck(){if(S.pin){$("lock").style.display="flex";$("pin").value="";$("lockMsg").textContent=""}}
@@ -215,6 +219,64 @@ document.addEventListener("visibilitychange",function(){if(document.hidden)lockC
 load();setLoc(S.loc||"Tienda");render();lockCheck();
 try{if("Notification" in window&&Notification.permission==="granted"){var k=today().toDateString();var u=S.items.filter(function(i){return diff(i.exp)<=S.days});if(S.lastN!==k&&u.length){new Notification("Mi Almacén",{body:u.length+" producto(s) por vencerse: "+u.map(function(i){return i.name}).join(", ")});S.lastN=k;save()}}}catch(e){}
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(function(){});
+</script>
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
+import {getAuth,signInAnonymously} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
+import {initializeFirestore,persistentLocalCache,doc,setDoc,getDoc,updateDoc,deleteDoc,collection,onSnapshot} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
+var VAPID="BCdQuR3-GSb1cRo3KehbkVn8vpN8RuNl6fg7Pvk-F-ZoaQCJrG8oya8s_q7RBvupHlBKvCHR8bK3edLpAhHQLTE";
+var app=initializeApp({apiKey:"AIzaSyCtAqzIu0mB-qKYlNn1sPNxnzfA4H2uk0k",authDomain:"mi-almacen-f2231.firebaseapp.com",projectId:"mi-almacen-f2231",storageBucket:"mi-almacen-f2231.firebasestorage.app",messagingSenderId:"789021754483",appId:"1:789021754483:web:87155a8a1d562f21205606"});
+var auth=getAuth(app),db=initializeFirestore(app,{localCache:persistentLocalCache()});
+var el=function(i){return document.getElementById(i)};
+var sid="";try{sid=localStorage.getItem("almacen-sid")||""}catch(e){}
+var uid=null,unsub=null;
+var ready=auth.authStateReady().then(function(){return auth.currentUser||signInAnonymously(auth)}).then(function(){uid=auth.currentUser&&auth.currentUser.uid}).catch(function(){});
+function clean(o){return JSON.parse(JSON.stringify(o))}
+function idoc(id){return doc(db,"stores",sid,"items",String(id))}
+function msg(t){var e=el("stSt");if(e)e.textContent=t}
+var okCode=function(c){return /^[\w-]{4,30}$/.test(c)};
+window.FB={
+ on:function(){return !!sid},
+ add:function(it){if(!sid)return;setDoc(idoc(it.id),Object.assign(clean(it),{st:"active",ts:Date.now()})).catch(function(){})},
+ act:function(a,it){if(!sid)return;updateDoc(idoc(it.id),a==="offer"?{offer:!!it.offer}:{st:a==="gone"?"sold":a==="waste"?"waste":"del",ts:Date.now()}).catch(function(){})},
+ resync:function(bf,af){if(!sid)return;var m={},k={};bf.forEach(function(i){m[i.id]=JSON.stringify(i)});
+  af.forEach(function(i){k[i.id]=1;if(m[i.id]!==JSON.stringify(i))FB.add(i)});
+  bf.forEach(function(i){if(!k[i.id])deleteDoc(idoc(i.id)).catch(function(){})})},
+ cat:function(c,n){if(okCode(c))setDoc(doc(db,"catalog",c),{name:n}).catch(function(){})},
+ getCat:function(c){if(!okCode(c))return Promise.resolve(null);
+  return Promise.race([getDoc(doc(db,"catalog",c)).then(function(d){return d.exists()?d.data().name:null}),new Promise(function(r){setTimeout(function(){r(null)},3500)})])}
+};
+function listen(){if(unsub)unsub();unsub=null;if(!sid)return;
+ unsub=onSnapshot(collection(db,"stores",sid,"items"),function(sn){
+  var it=[],so=0,w=0;
+  sn.forEach(function(d){var x=d.data();
+   if(x.st==="sold")so+=x.qty||1;else if(x.st==="waste")w+=x.qty||1;
+   else if(x.st==="active"||!x.st){if(x.code)S.cat[x.code]=x.name;it.push({id:x.id,code:x.code||"",name:x.name,exp:x.exp,qty:x.qty||1,loc:x.loc||"Tienda",offer:!!x.offer})}});
+  S.items=it;S.sold=so;S.waste=w;save();render();
+  msg(sn.metadata.hasPendingWrites||sn.metadata.fromCache?"\u23f3 Sin conexi\u00f3n: se enviar\u00e1 cuando vuelva internet":"\u2714 Sincronizado")
+ },function(){msg("No pude conectar con el almac\u00e9n")})}
+function join(c){sid=c;try{localStorage.setItem("almacen-sid",c)}catch(e){}
+ S.items.slice().forEach(function(i){FB.add(i)});listen();ui()}
+function mk(){var A="ABCDEFGHJKMNPQRSTUVWXYZ23456789",r=crypto.getRandomValues(new Uint8Array(8)),s="";for(var i=0;i<8;i++)s+=A[r[i]%31];return s}
+function push(){msg("Pidiendo permiso\u2026");
+ import("https://www.gstatic.com/firebasejs/13.2.0/firebase-messaging.js").then(function(M){
+  return M.isSupported().then(function(ok){if(!ok)throw"Este celular no soporta avisos push.";return Notification.requestPermission()})
+  .then(function(p){if(p!=="granted")throw"Sin permiso de notificaciones.";return navigator.serviceWorker.ready})
+  .then(function(reg){return M.getToken(M.getMessaging(app),{vapidKey:VAPID,serviceWorkerRegistration:reg})})})
+ .then(function(t){if(!t)throw"No pude activar los avisos.";return setDoc(doc(db,"stores",sid,"devices",t.slice(-20)),{token:t,uid:uid,ts:Date.now()})})
+ .then(function(){msg("\u2714 Avisos activados en este celular")}).catch(function(e){msg(typeof e==="string"?e:"No pude activar los avisos.")})}
+function ui(){var b=el("storeBody");
+ if(sid){b.innerHTML='<p class="mut">C\u00f3digo de tu almac\u00e9n (comp\u00e1rtelo con tus empleados):</p><div style="font-size:30px;font-weight:800;letter-spacing:3px;text-align:center;margin:8px 0">'+sid.slice(0,4)+'-'+sid.slice(4)+'</div><p class="mut" id="stSt"></p><button id="btnPush" style="width:100%;margin-top:8px">\ud83d\udd14 Avisos con el celular bloqueado</button><button class="sec" id="stOut" style="width:100%;margin-top:8px">Salir de este almac\u00e9n</button>';
+  el("btnPush").onclick=push;
+  el("stOut").onclick=function(){if(!confirm("\u00bfSalir de este almac\u00e9n? Este celular dejar\u00e1 de sincronizar."))return;if(unsub)unsub();unsub=null;sid="";try{localStorage.removeItem("almacen-sid")}catch(e){}ui()}}
+ else{b.innerHTML='<p class="mut">Con un c\u00f3digo, todos los celulares ven lo mismo: si alguien marca Vendido, el aviso desaparece para todos.</p><button id="stNew" style="width:100%">Crear mi almac\u00e9n</button><input id="stCode" placeholder="Tengo un c\u00f3digo (ej: K7P2-9QXM)" style="margin-top:10px;text-transform:uppercase"><button class="sec" id="stJoin" style="width:100%;margin-top:8px">Unirme con c\u00f3digo</button><p class="mut" id="stSt"></p>';
+  el("stNew").onclick=function(){if(!navigator.onLine){msg("Necesito internet para crear el almac\u00e9n.");return}msg("Creando\u2026");
+   ready.then(function(){var c=mk();return setDoc(doc(db,"stores",c),{owner:uid,ts:Date.now()}).then(function(){join(c)})}).catch(function(){msg("No pude crearlo. Intenta de nuevo.")})};
+  el("stJoin").onclick=function(){var c=el("stCode").value.toUpperCase().replace(/[^A-Z0-9]/g,"");
+   if(c.length!==8){msg("El c\u00f3digo tiene 8 letras y n\u00fameros.");return}
+   if(!navigator.onLine){msg("Necesito internet para unirme.");return}msg("Buscando\u2026");
+   ready.then(function(){return getDoc(doc(db,"stores",c))}).then(function(d){if(d.exists())join(c);else msg("Ese c\u00f3digo no existe.")}).catch(function(){msg("No pude conectar. Intenta de nuevo.")})}}}
+ui();if(sid)listen();
 </script>
 </body>
 </html>
