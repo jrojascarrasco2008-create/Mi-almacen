@@ -53,7 +53,7 @@ video{width:100%;border-radius:12px;background:#000;margin-top:8px}
     <input id="name" list="sug" placeholder="Ej: queso..." autocomplete="off">
     <datalist id="sug"></datalist>
     <div class="row">
-      <div><label for="exp">Vence el</label><input id="exp" type="date"></div>
+      <div><label for="expt">Vence (ej: 311226)</label><input id="expt" inputmode="numeric" maxlength="10" placeholder="DDMMAA" autocomplete="off"><input id="exp" type="hidden"><div id="expmsg" class="mut" style="margin-top:4px"></div></div>
       <div><label for="qty">Cantidad</label><input id="qty" type="number" min="1" value="1" inputmode="numeric"></div>
     </div>
     <div class="row" id="quick" style="margin-top:8px"><button class="sec" type="button" data-d="3">+3 d</button><button class="sec" type="button" data-d="7">+7 d</button><button class="sec" type="button" data-d="15">+15 d</button><button class="sec" type="button" data-d="30">+30 d</button><button class="sec" type="button" data-d="60">+60 d</button></div>
@@ -151,7 +151,7 @@ $("save").onclick=function(){
   if(!n||!e){$("scanMsg").textContent="Falta el nombre o la fecha de vencimiento.";return}
   var snap=JSON.stringify(S);if(c){S.cat[c]=n;S.life=S.life||{};S.life[c]=diff(e)}
   S.items.push({id:Date.now(),code:c,name:n,exp:e,qty:q,loc:curLoc});
-  save();["code","name","exp"].forEach(function(i){$(i).value=""});$("qty").value=1;
+  save();["code","name","exp","expt"].forEach(function(i){$(i).value=""});showExp();$("qty").value=1;
   $("scanMsg").textContent="Guardado ✔ Siguiente producto";render();toast("Guardado: "+n,snap);if(usedScan)$("btnScan").onclick();
 };
 var stream=null,timer=null;
@@ -165,8 +165,8 @@ $("btnScan").onclick=function(){
     timer=setInterval(function(){det.detect(v).then(function(r){
       if(r.length){$("code").value=r[0].rawValue;usedScan=true;stopScan();
         var n=S.cat[r[0].rawValue];
-        if(n){$("name").value=n;autoLife(r[0].rawValue);$("scanMsg").textContent="✅ "+n+(S.life&&S.life[r[0].rawValue]>0?" · fecha propuesta: revísala y guarda":". Pon la fecha.")}
-        else{$("scanMsg").textContent="Producto nuevo 🆕 Escribe cómo se llama y la fecha."; $("name").focus()}
+        if(n){$("name").value=n;autoLife(r[0].rawValue);if(!(S.life&&S.life[r[0].rawValue]>0))$("expt").focus();$("scanMsg").textContent="✅ "+n+(S.life&&S.life[r[0].rawValue]>0?" · fecha propuesta: revísala y guarda":". Pon la fecha.")}
+        else{$("scanMsg").textContent="Producto nuevo 🆕 Buscando en la base…"; $("name").focus();lookup(r[0].rawValue)}
       }}).catch(function(){})},400);
   }).catch(function(){$("scanMsg").textContent="No pude abrir la cámara. Revisa el permiso."});
 };
@@ -182,7 +182,26 @@ $("btnNotif").onclick=function(){
 var curLoc="Tienda",usedScan=false;
 function setLoc(l){curLoc=l;S.loc=l;document.querySelectorAll("#locb button").forEach(function(b){b.classList.toggle("on",b.dataset.l===l)})}
 $("locb").addEventListener("click",function(e){var l=e.target.dataset.l;if(l){setLoc(l);save()}});
-function setDays(n){var x=today();x.setDate(x.getDate()+n);$("exp").value=x.getFullYear()+"-"+("0"+(x.getMonth()+1)).slice(-2)+"-"+("0"+x.getDate()).slice(-2)}
+function iso(d){return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2)}
+function showExp(){var v=$("exp").value;$("expmsg").textContent=v?"\u2714 "+fmt(v)+" \u00b7 "+(diff(v)<0?"\u00a1ya vencido!":"en "+diff(v)+" d\u00edas"):""}
+function setDays(n){var x=today();x.setDate(x.getDate()+n);$("exp").value=iso(x);$("expt").value=fmt(iso(x));showExp()}
+function parseExp(t){var s=t.replace(/\D/g,""),d,m,y;
+  if(s.length===6||s.length===8){d=+s.slice(0,2);m=+s.slice(2,4);y=+s.slice(4);if(y<100)y+=2000}
+  else if(s.length===4){m=+s.slice(0,2);y=2000+(+s.slice(2));d=new Date(y,m,0).getDate()}
+  else return "";
+  var x=new Date(y,m-1,d);if(m<1||m>12||x.getMonth()!==m-1||x.getDate()!==d)return "";return iso(x)}
+$("expt").addEventListener("input",function(){$("exp").value=parseExp(this.value);showExp()});
+function lookup(c){
+  function miss(){if($("code").value.trim()===c&&!$("name").value)$("scanMsg").textContent="Producto nuevo \ud83c\udd95 Escribe el nombre y la fecha."}
+  if(!navigator.onLine||!/^\d{8,14}$/.test(c)){miss();return}
+  var ctl=window.AbortController?new AbortController():null,tm=setTimeout(function(){if(ctl)ctl.abort()},5000);
+  fetch("https://world.openfoodfacts.org/api/v2/product/"+c+".json?fields=product_name,brands,quantity",ctl?{signal:ctl.signal}:{})
+  .then(function(r){return r.json()}).then(function(j){clearTimeout(tm);
+    var p=j&&j.status===1&&j.product;if(!p){miss();return}
+    if($("code").value.trim()!==c||$("name").value)return;
+    var n=[p.product_name,(p.brands||"").split(",")[0],p.quantity].filter(Boolean).join(" ").trim();
+    if(n){$("name").value=n;$("scanMsg").textContent="\ud83c\udf10 Encontr\u00e9: "+n+". Revisa y pon la fecha.";$("expt").focus()}else miss()
+  }).catch(miss)}
 function autoLife(c){if(S.life&&S.life[c]>0)setDays(S.life[c])}
 $("quick").addEventListener("click",function(e){var d=e.target.dataset.d;if(d)setDays(+d)});
 $("tund").onclick=function(){if(undoSnap){S=JSON.parse(undoSnap);save();setLoc(S.loc||"Tienda");render()}$("toast").style.display="none"};
