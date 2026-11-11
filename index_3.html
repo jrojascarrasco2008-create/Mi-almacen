@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mi Almacén · Vencimientos</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1f7a4d">
+<link rel="icon" href="icon-192.png">
+<style>
+:root{--bg:#f6f5f0;--card:#fff;--tx:#1d1d1b;--mut:#6b6a63;--br:#e2e0d6;--ac:#1f7a4d;--acx:#fff;--red:#c0392b;--amb:#b7791f;--grn:#1f7a4d;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#161614;--card:#222220;--tx:#f0efe8;--mut:#a3a199;--br:#383733;--ac:#4cc38a;--acx:#0d1a12;--red:#ff7b6b;--amb:#f0b44c;--grn:#4cc38a}}
+:root[data-theme="dark"]{--bg:#161614;--card:#222220;--tx:#f0efe8;--mut:#a3a199;--br:#383733;--ac:#4cc38a;--acx:#0d1a12;--red:#ff7b6b;--amb:#f0b44c;--grn:#4cc38a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;max-width:560px;margin:0 auto;padding:16px 16px 90px}
+h1{font-size:20px;margin:4px 0 12px}
+.card{background:var(--card);border:1px solid var(--br);border-radius:14px;padding:14px;margin-bottom:10px}
+.banner{border-left:5px solid var(--amb)}
+.banner.ok{border-left-color:var(--grn)}
+label{display:block;font-size:13px;color:var(--mut);margin:10px 0 4px}
+input,select{width:100%;padding:12px;border:1px solid var(--br);border-radius:10px;background:var(--bg);color:var(--tx);font-size:16px}
+button{font:inherit;border:0;border-radius:10px;padding:12px 14px;background:var(--ac);color:var(--acx);font-weight:600;cursor:pointer}
+button.sec{background:transparent;color:var(--tx);border:1px solid var(--br)}
+.row{display:flex;gap:8px}.row>*{flex:1}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid var(--br);padding:8px 8px calc(8px + env(safe-area-inset-bottom,0px))}
+nav button{flex:1;background:transparent;color:var(--mut);border-radius:8px}
+nav button.on{color:var(--ac)}
+.badge{display:inline-block;font-size:12px;font-weight:700;padding:2px 8px;border-radius:99px;border:1px solid currentColor}
+.red{color:var(--red)}.amb{color:var(--amb)}.grn{color:var(--grn)}
+.mut{color:var(--mut);font-size:13px}
+video{width:100%;border-radius:12px;background:#000;margin-top:8px}
+.hide{display:none}.row button.on{background:var(--ac);color:var(--acx);border-color:var(--ac)}#quick button{padding:12px 4px}#toast{position:fixed;left:12px;right:12px;bottom:calc(70px + env(safe-area-inset-bottom,0px));max-width:536px;margin:0 auto;background:var(--tx);color:var(--bg);border-radius:12px;padding:10px 14px;justify-content:space-between;align-items:center;gap:8px;z-index:5}#toast button{background:transparent;color:var(--bg);border:1px solid var(--bg)}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+</style>
+</head>
+<body>
+<h1>🏪 Mi Almacén</h1>
+
+<section id="v-hoy">
+  <div id="banner" class="card banner"></div>
+  <input id="q" placeholder="🔍 Buscar producto o escribir: bodega / tienda" style="margin-bottom:10px">
+  <div id="lista"></div>
+</section>
+
+<section id="v-add" class="hide">
+  <div class="card">
+    <button class="sec" id="btnScan" style="width:100%">📷 Escanear código de barras</button>
+    <video id="vid" class="hide" playsinline muted></video>
+    <p id="scanMsg" class="mut"></p>
+    <label for="code">Código</label>
+    <input id="code" inputmode="numeric" placeholder="Escanea o escríbelo">
+    <label for="name">Nombre del producto</label>
+    <input id="name" list="sug" placeholder="Ej: queso..." autocomplete="off">
+    <datalist id="sug"></datalist>
+    <div class="row">
+      <div><label for="exp">Vence el</label><input id="exp" type="date"></div>
+      <div><label for="qty">Cantidad</label><input id="qty" type="number" min="1" value="1" inputmode="numeric"></div>
+    </div>
+    <div class="row" id="quick" style="margin-top:8px"><button class="sec" type="button" data-d="3">+3 d</button><button class="sec" type="button" data-d="7">+7 d</button><button class="sec" type="button" data-d="15">+15 d</button><button class="sec" type="button" data-d="30">+30 d</button><button class="sec" type="button" data-d="60">+60 d</button></div>
+    <label>¿Dónde lo dejas?</label>
+    <div class="row" id="locb"><button type="button" class="sec on" data-l="Tienda" style="padding:16px">🏪 Tienda</button><button type="button" class="sec" data-l="Bodega" style="padding:16px">📦 Bodega</button></div>
+    <button id="save" style="width:100%;margin-top:14px">Guardar</button>
+  </div>
+</section>
+
+<section id="v-cfg" class="hide">
+  <div class="card">
+    <b>Avisos</b>
+    <p class="mut">Avisar cuántos días antes de que venza:</p>
+    <select id="daysBefore"><option value="1">1 día antes</option><option value="2">2 días antes</option><option value="3">3 días antes</option></select>
+    <button id="btnNotif" style="width:100%;margin-top:12px">🔔 Activar notificaciones</button>
+    <p class="mut">Esta es una versión de prueba: los datos se guardan solo en este celular. Las notificaciones push con la app cerrada y las cuentas por almacén vienen en la siguiente etapa.</p>
+  </div>
+  <div class="card"><b>🔒 PIN de acceso</b><p class="mut">Pide un PIN al abrir la app. Es un freno básico: las cuentas reales por almacén vienen con el servidor.</p><button class="sec" id="setPin" style="width:100%">Crear / cambiar / quitar PIN</button></div>
+  <div class="card"><b>📊 Resumen</b><p id="stats" class="mut"></p></div>
+  <div class="card"><b>💾 Respaldo</b><p class="mut">Como los datos viven en este celular, copia un respaldo de vez en cuando.</p><div class="row"><button class="sec" id="bk">Copiar respaldo</button><button class="sec" id="rs">Restaurar</button></div></div>
+  <div class="card"><b>Productos conocidos</b><p id="catInfo" class="mut"></p>
+    <button class="sec" id="reset" style="width:100%">Borrar todos los datos</button></div>
+</section>
+
+<div id="toast" style="display:none"><span id="tmsg"></span><button id="tund">Deshacer</button></div>
+<div id="lock" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:9;flex-direction:column;justify-content:center;gap:12px;padding:24px;max-width:560px;margin:0 auto"><h1>🔒 Mi Almacén</h1><input id="pin" type="password" inputmode="numeric" maxlength="4" placeholder="PIN de 4 dígitos"><button id="unlock">Entrar</button><p id="lockMsg" class="mut"></p></div>
+<nav>
+  <button data-v="hoy" class="on">📅 Vencimientos</button>
+  <button data-v="add">➕ Agregar</button>
+  <button data-v="cfg">⚙️ Ajustes</button>
+</nav>
+
+<script>
+var SEED=["Queso mantecoso","Queso de cabra","Queso gauda","Queso crema","Galletas Triton","Galletas Kuky","Galletas Tritón vainilla","Yogurt natural","Leche entera 1L","Leche semidescremada 1L","Jamón de pavo","Jamón pierna","Mortadela","Pan de molde","Mayonesa","Salchichas","Margarina","Jugo en caja","Huevos docena"];
+var S={items:[],cat:{},days:2};
+function load(){try{var r=localStorage.getItem("almacen-v1");if(r)S=JSON.parse(r)}catch(e){}}
+function save(){try{localStorage.setItem("almacen-v1",JSON.stringify(S))}catch(e){}}
+function $(i){return document.getElementById(i)}
+var tt=null,undoSnap=null;
+function toast(m,snap){undoSnap=snap;$("tmsg").textContent=m;$("toast").style.display="flex";clearTimeout(tt);tt=setTimeout(function(){$("toast").style.display="none"},8000)}
+function esc(t){var d=document.createElement("div");d.textContent=t;return d.innerHTML}
+function today(){var d=new Date();d.setHours(0,0,0,0);return d}
+function diff(s){var p=s.split("-");var d=new Date(+p[0],+p[1]-1,+p[2]);return Math.round((d-today())/864e5)}
+function fmt(s){var p=s.split("-");return p[2]+"/"+p[1]+"/"+p[0]}
+function status(n){
+  if(n<0)return['Vencido hace '+(-n)+' d','red'];
+  if(n===0)return['Vence HOY','red'];
+  if(n===1)return['Vence mañana','red'];
+  if(n<=S.days)return['Vence en '+n+' días','amb'];
+  return['En '+n+' días','grn'];
+}
+function render(){
+  var items=S.items.slice().sort(function(a,b){return a.exp<b.exp?-1:1});
+  var urgent=items.filter(function(i){return diff(i.exp)<=S.days});
+  var b=$("banner");
+  if(urgent.length){
+    b.className="card banner";
+    var vv=items.filter(function(i){return diff(i.exp)<0}).length;b.innerHTML="<b>⚠️ Ojo: "+urgent.length+" producto"+(urgent.length>1?"s":"")+" por vencerse</b>"+(vv?"<div class='red'><b>🚫 "+vv+" ya vencido"+(vv>1?"s":"")+": sácalo"+(vv>1?"s":"")+" de la repisa</b></div>":"")+"<div class='mut'>"+urgent.map(function(i){return esc(i.name)}).join(", ")+"</div>";
+  }else{
+    b.className="card banner ok";
+    b.innerHTML="<b>✅ Todo al día</b><div class='mut'>"+(items.length?"Nada vence en los próximos "+S.days+" días.":"Agrega tu primer producto en la pestaña ➕")+"</div>";
+  }
+  $("lista").innerHTML=items.filter(function(i){var q=$("q").value.trim().toLowerCase();return !q||i.name.toLowerCase().indexOf(q)>-1||i.loc.toLowerCase()===q}).map(function(i){
+    var st=status(diff(i.exp));var warn=diff(i.exp)<=S.days;
+    return "<div class='card'><div class='top'><b>"+esc(i.name)+(i.offer?" 🏷️":"")+"</b><span class='badge "+st[1]+"'>"+st[0]+"</span></div>"+
+    "<div class='mut'>"+fmt(i.exp)+" · "+i.qty+" un. · "+esc(i.loc)+"</div>"+
+    (warn?"<p style='margin:10px 0 6px'>¿Aún te quedan? Ponlas en oferta 🏷️</p><div class='row' style='font-size:14px'><button data-a='offer' data-id='"+i.id+"' class='sec' style='padding:10px 6px'>"+(i.offer?"Quitar oferta":"🏷️ Oferta")+"</button><button data-a='gone' data-id='"+i.id+"' style='padding:10px 6px'>✔ Vendido</button><button data-a='waste' data-id='"+i.id+"' class='sec' style='padding:10px 6px'>🗑 Botado</button></div>"
+     :"<div style='margin-top:8px'><button class='sec' data-a='del' data-id='"+i.id+"' style='padding:6px 10px;font-size:13px'>Quitar</button></div>")+"</div>";
+  }).join("");
+  var names=Object.keys(S.cat).map(function(k){return S.cat[k]}).concat(SEED);
+  var seen={};$("sug").innerHTML=names.filter(function(n){if(seen[n])return false;seen[n]=1;return true}).map(function(n){return "<option value='"+esc(n)+"'>"}).join("");
+  $("catInfo").textContent=Object.keys(S.cat).length+" producto(s) aprendidos por escaneo.";
+  $("daysBefore").value=String(S.days);
+  var so=S.sold||0,w=S.waste||0;
+  $("stats").textContent="Vendidos a tiempo: "+so+" un. · Botados: "+w+" un."+((so+w)?" · Merma: "+Math.round(w*100/(so+w))+"%":"");
+}
+$("lista").addEventListener("click",function(e){
+  var t=e.target.closest("button");if(!t)return;var id=t.dataset.id;
+  var a=t.dataset.a,snap=JSON.stringify(S);
+  S.items.forEach(function(i){if(String(i.id)!==id)return;
+    if(a==="offer")i.offer=!i.offer;
+    if(a==="gone")S.sold=(S.sold||0)+i.qty;
+    if(a==="waste")S.waste=(S.waste||0)+i.qty});
+  if(a!=="offer")S.items=S.items.filter(function(i){return String(i.id)!==id});
+  save();render();toast({offer:"Oferta cambiada",gone:"Vendido ✔",waste:"Botado",del:"Producto quitado"}[a],snap);
+});
+document.querySelectorAll("nav button").forEach(function(b){b.onclick=function(){
+  document.querySelectorAll("nav button").forEach(function(x){x.classList.toggle("on",x===b)});
+  ["hoy","add","cfg"].forEach(function(v){$("v-"+v).classList.toggle("hide",v!==b.dataset.v)});
+  if(b.dataset.v!=="add")stopScan();
+}});
+$("code").addEventListener("input",function(){var n=S.cat[$("code").value.trim()];if(n){$("name").value=n;autoLife($("code").value.trim());$("scanMsg").textContent="✅ Producto conocido: "+n}});
+$("save").onclick=function(){
+  var c=$("code").value.trim(),n=$("name").value.trim(),e=$("exp").value,q=parseInt($("qty").value)||1;
+  if(!n||!e){$("scanMsg").textContent="Falta el nombre o la fecha de vencimiento.";return}
+  var snap=JSON.stringify(S);if(c){S.cat[c]=n;S.life=S.life||{};S.life[c]=diff(e)}
+  S.items.push({id:Date.now(),code:c,name:n,exp:e,qty:q,loc:curLoc});
+  save();["code","name","exp"].forEach(function(i){$(i).value=""});$("qty").value=1;
+  $("scanMsg").textContent="Guardado ✔ Siguiente producto";render();toast("Guardado: "+n,snap);if(usedScan)$("btnScan").onclick();
+};
+var stream=null,timer=null;
+function stopScan(){if(timer)clearInterval(timer);timer=null;if(stream){stream.getTracks().forEach(function(t){t.stop()});stream=null}$("vid").classList.add("hide")}
+$("btnScan").onclick=function(){
+  if(!("BarcodeDetector" in window)){$("scanMsg").textContent="Este navegador no puede escanear. Prueba con Chrome en Android o escribe el código a mano.";return}
+  navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}}).then(function(s){
+    stream=s;var v=$("vid");v.srcObject=s;v.classList.remove("hide");v.play();
+    var det=new BarcodeDetector({formats:["ean_13","ean_8","upc_a","upc_e","code_128"]});
+    $("scanMsg").textContent="Apunta al código de barras…";
+    timer=setInterval(function(){det.detect(v).then(function(r){
+      if(r.length){$("code").value=r[0].rawValue;usedScan=true;stopScan();
+        var n=S.cat[r[0].rawValue];
+        if(n){$("name").value=n;autoLife(r[0].rawValue);$("scanMsg").textContent="✅ "+n+(S.life&&S.life[r[0].rawValue]>0?" · fecha propuesta: revísala y guarda":". Pon la fecha.")}
+        else{$("scanMsg").textContent="Producto nuevo 🆕 Escribe cómo se llama y la fecha."; $("name").focus()}
+      }}).catch(function(){})},400);
+  }).catch(function(){$("scanMsg").textContent="No pude abrir la cámara. Revisa el permiso."});
+};
+$("daysBefore").onchange=function(){S.days=+$("daysBefore").value;save();render()};
+$("reset").onclick=function(){if(confirm("¿Borrar todo?")){S={items:[],cat:{},days:2};save();render()}};
+$("btnNotif").onclick=function(){
+  if(!("Notification" in window)){alert("Este navegador no soporta notificaciones.");return}
+  Notification.requestPermission().then(function(p){
+    if(p==="granted"){var u=S.items.filter(function(i){return diff(i.exp)<=S.days});
+      new Notification("Mi Almacén",{body:u.length?u.length+" producto(s) por vencerse: "+u.map(function(i){return i.name}).join(", "):"Notificaciones activadas ✔"})}
+  });
+};
+var curLoc="Tienda",usedScan=false;
+function setLoc(l){curLoc=l;S.loc=l;document.querySelectorAll("#locb button").forEach(function(b){b.classList.toggle("on",b.dataset.l===l)})}
+$("locb").addEventListener("click",function(e){var l=e.target.dataset.l;if(l){setLoc(l);save()}});
+function setDays(n){var x=today();x.setDate(x.getDate()+n);$("exp").value=x.getFullYear()+"-"+("0"+(x.getMonth()+1)).slice(-2)+"-"+("0"+x.getDate()).slice(-2)}
+function autoLife(c){if(S.life&&S.life[c]>0)setDays(S.life[c])}
+$("quick").addEventListener("click",function(e){var d=e.target.dataset.d;if(d)setDays(+d)});
+$("tund").onclick=function(){if(undoSnap){S=JSON.parse(undoSnap);save();setLoc(S.loc||"Tienda");render()}$("toast").style.display="none"};
+$("bk").onclick=function(){var t=JSON.stringify(S);try{navigator.clipboard.writeText(t).then(function(){alert("Respaldo copiado ✔ Pégalo en un chat o nota para guardarlo.")})}catch(e){prompt("Copia este texto:",t)}};
+$("rs").onclick=function(){var t=prompt("Pega aquí tu respaldo:");if(!t)return;try{var o=JSON.parse(t);if(o&&o.items){S=o;save();render();alert("Restaurado ✔")}}catch(e){alert("Ese texto no es un respaldo válido.")}};
+function lockCheck(){if(S.pin){$("lock").style.display="flex";$("pin").value="";$("lockMsg").textContent=""}}
+$("unlock").onclick=function(){if(btoa($("pin").value)===S.pin){$("lock").style.display="none"}else{$("lockMsg").textContent="PIN incorrecto"}};
+$("setPin").onclick=function(){var p=prompt("Nuevo PIN de 4 números (vacío = quitar PIN):");if(p===null)return;if(p===""){delete S.pin}else if(/^\d{4}$/.test(p)){S.pin=btoa(p)}else{alert("Deben ser 4 números.");return}save();alert(S.pin?"PIN activado 🔒":"PIN quitado")};
+$("q").addEventListener("input",render);
+document.addEventListener("visibilitychange",function(){if(document.hidden)lockCheck()});
+load();setLoc(S.loc||"Tienda");render();lockCheck();
+try{if("Notification" in window&&Notification.permission==="granted"){var k=today().toDateString();var u=S.items.filter(function(i){return diff(i.exp)<=S.days});if(S.lastN!==k&&u.length){new Notification("Mi Almacén",{body:u.length+" producto(s) por vencerse: "+u.map(function(i){return i.name}).join(", ")});S.lastN=k;save()}}}catch(e){}
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(function(){});
+</script>
+</body>
+</html>
