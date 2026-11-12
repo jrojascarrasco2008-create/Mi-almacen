@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mi Almacén · Vencimientos</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1f7a4d">
+<link rel="icon" href="icono-192.png">
+<style>
+:root{--bg:#f6f5f0;--card:#fff;--tx:#1d1d1b;--mut:#6b6a63;--br:#e2e0d6;--ac:#1f7a4d;--acx:#fff;--red:#c0392b;--amb:#b7791f;--grn:#1f7a4d;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#161614;--card:#222220;--tx:#f0efe8;--mut:#a3a199;--br:#383733;--ac:#4cc38a;--acx:#0d1a12;--red:#ff7b6b;--amb:#f0b44c;--grn:#4cc38a}}
+:root[data-theme="dark"]{--bg:#161614;--card:#222220;--tx:#f0efe8;--mut:#a3a199;--br:#383733;--ac:#4cc38a;--acx:#0d1a12;--red:#ff7b6b;--amb:#f0b44c;--grn:#4cc38a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;max-width:560px;margin:0 auto;padding:16px 16px 90px}
+h1{font-size:20px;margin:4px 0 12px}
+.card{background:var(--card);border:1px solid var(--br);border-radius:14px;padding:14px;margin-bottom:10px}
+.banner{border-left:5px solid var(--amb)}
+.banner.ok{border-left-color:var(--grn)}
+label{display:block;font-size:13px;color:var(--mut);margin:10px 0 4px}
+input,select{width:100%;padding:12px;border:1px solid var(--br);border-radius:10px;background:var(--bg);color:var(--tx);font-size:16px}
+button{font:inherit;border:0;border-radius:10px;padding:12px 14px;background:var(--ac);color:var(--acx);font-weight:600;cursor:pointer}
+button.sec{background:transparent;color:var(--tx);border:1px solid var(--br)}
+.row{display:flex;gap:8px}.row>*{flex:1}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid var(--br);padding:8px 8px calc(8px + env(safe-area-inset-bottom,0px))}
+nav button{flex:1;background:transparent;color:var(--mut);border-radius:8px}
+nav button.on{color:var(--ac)}
+.badge{display:inline-block;font-size:12px;font-weight:700;padding:2px 8px;border-radius:99px;border:1px solid currentColor}
+.red{color:var(--red)}.amb{color:var(--amb)}.grn{color:var(--grn)}
+.mut{color:var(--mut);font-size:13px}
+video{width:100%;border-radius:12px;background:#000;margin-top:8px}
+.hide{display:none}.row button.on{background:var(--ac);color:var(--acx);border-color:var(--ac)}#quick button{padding:12px 4px}#toast{position:fixed;left:12px;right:12px;bottom:calc(70px + env(safe-area-inset-bottom,0px));max-width:536px;margin:0 auto;background:var(--tx);color:var(--bg);border-radius:12px;padding:10px 14px;justify-content:space-between;align-items:center;gap:8px;z-index:5}#toast button{background:transparent;color:var(--bg);border:1px solid var(--bg)}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+</style>
+</head>
+<body>
+<h1>🏪 Mi Almacén</h1>
+
+<section id="v-hoy">
+  <div id="banner" class="card banner"></div>
+  <input id="q" placeholder="🔍 Buscar producto o escribir: bodega / tienda" style="margin-bottom:10px">
+  <div id="lista"></div>
+</section>
+
+<section id="v-add" class="hide">
+  <div class="card">
+    <button class="sec" id="btnScan" style="width:100%">📷 Escanear código de barras</button>
+    <video id="vid" class="hide" playsinline muted></video>
+    <p id="scanMsg" class="mut"></p>
+    <label for="code">Código</label>
+    <input id="code" inputmode="numeric" placeholder="Escanea o escríbelo">
+    <label for="name">Nombre del producto</label>
+    <input id="name" list="sug" placeholder="Ej: queso..." autocomplete="off">
+    <datalist id="sug"></datalist>
+    <div class="row">
+      <div><label for="expt">Vence (ej: 311226)</label><input id="expt" inputmode="numeric" maxlength="10" placeholder="DDMMAA" autocomplete="off"><input id="exp" type="hidden"><div id="expmsg" class="mut" style="margin-top:4px"></div></div>
+      <div><label for="qty">Cantidad</label><input id="qty" type="number" min="1" value="1" inputmode="numeric"></div>
+    </div>
+    <div class="row" id="quick" style="margin-top:8px"><button class="sec" type="button" data-d="3">+3 d</button><button class="sec" type="button" data-d="7">+7 d</button><button class="sec" type="button" data-d="15">+15 d</button><button class="sec" type="button" data-d="30">+30 d</button><button class="sec" type="button" data-d="60">+60 d</button></div>
+    <label>¿Dónde lo dejas?</label>
+    <div class="row" id="locb"><button type="button" class="sec on" data-l="Tienda" style="padding:16px">🏪 Tienda</button><button type="button" class="sec" data-l="Bodega" style="padding:16px">📦 Bodega</button></div>
+    <button id="save" style="width:100%;margin-top:14px">Guardar</button>
+  </div>
+</section>
+
+<section id="v-cfg" class="hide">
+  <div class="card">
+    <b>Avisos</b>
+    <p class="mut">Avisar cuántos días antes de que venza:</p>
+    <select id="daysBefore"><option value="1">1 día antes</option><option value="2">2 días antes</option><option value="3">3 días antes</option></select>
+    <button id="btnNotif" style="width:100%;margin-top:12px">🔔 Activar notificaciones</button>
+    <p class="mut">Estos avisos funcionan con la app abierta. Para recibirlos con el celular bloqueado, une tu almacén más abajo.</p>
+  </div>
+  <div class="card"><b>🏪 Mi almacén (varios celulares)</b><div id="storeBody"><p class="mut">Cargando…</p></div></div>
+  <div class="card"><b>🔒 PIN de acceso</b><p class="mut">Pide un PIN al abrir la app. Es un freno básico: las cuentas reales por almacén vienen con el servidor.</p><button class="sec" id="setPin" style="width:100%">Crear / cambiar / quitar PIN</button></div>
+  <div class="card"><b>📊 Resumen</b><p id="stats" class="mut"></p></div>
+  <div class="card"><b>💾 Respaldo</b><p class="mut">Como los datos viven en este celular, copia un respaldo de vez en cuando.</p><div class="row"><button class="sec" id="bk">Copiar respaldo</button><button class="sec" id="rs">Restaurar</button></div></div>
+  <div class="card"><b>Productos conocidos</b><p id="catInfo" class="mut"></p>
+    <button class="sec" id="reset" style="width:100%">Borrar todos los datos</button></div>
+</section>
+
+<div id="toast" style="display:none"><span id="tmsg"></span><button id="tund">Deshacer</button></div>
+<div id="lock" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:9;flex-direction:column;justify-content:center;gap:12px;padding:24px;max-width:560px;margin:0 auto"><h1>🔒 Mi Almacén</h1><input id="pin" type="password" inputmode="numeric" maxlength="4" placeholder="PIN de 4 dígitos"><button id="unlock">Entrar</button><p id="lockMsg" class="mut"></p></div>
+<nav>
+  <button data-v="hoy" class="on">📅 Vencimientos</button>
+  <button data-v="add">➕ Agregar</button>
+  <button data-v="cfg">⚙️ Ajustes</button>
+</nav>
+
+<script>
+var SEED=["Queso mantecoso","Queso de cabra","Queso gauda","Queso crema","Galletas Triton","Galletas Kuky","Galletas Tritón vainilla","Yogurt natural","Leche entera 1L","Leche semidescremada 1L","Jamón de pavo","Jamón pierna","Mortadela","Pan de molde","Mayonesa","Salchichas","Margarina","Jugo en caja","Huevos docena"];
+var S={items:[],cat:{},days:2};
+function load(){try{var r=localStorage.getItem("almacen-v1");if(r)S=JSON.parse(r)}catch(e){}}
+function save(){try{localStorage.setItem("almacen-v1",JSON.stringify(S))}catch(e){}}
+function $(i){return document.getElementById(i)}
+var tt=null,undoSnap=null;
+function toast(m,snap){undoSnap=snap;$("tmsg").textContent=m;$("toast").style.display="flex";clearTimeout(tt);tt=setTimeout(function(){$("toast").style.display="none"},8000)}
+function esc(t){var d=document.createElement("div");d.textContent=t;return d.innerHTML}
+function today(){var d=new Date();d.setHours(0,0,0,0);return d}
+function diff(s){var p=s.split("-");var d=new Date(+p[0],+p[1]-1,+p[2]);return Math.round((d-today())/864e5)}
+function fmt(s){var p=s.split("-");return p[2]+"/"+p[1]+"/"+p[0]}
+function status(n){
+  if(n<0)return['Vencido hace '+(-n)+' d','red'];
+  if(n===0)return['Vence HOY','red'];
+  if(n===1)return['Vence mañana','red'];
+  if(n<=S.days)return['Vence en '+n+' días','amb'];
+  return['En '+n+' días','grn'];
+}
+function render(){
+  var items=S.items.slice().sort(function(a,b){return a.exp<b.exp?-1:1});
+  var urgent=items.filter(function(i){return diff(i.exp)<=S.days});
+  var b=$("banner");
+  if(urgent.length){
+    b.className="card banner";
+    var vv=items.filter(function(i){return diff(i.exp)<0}).length;b.innerHTML="<b>⚠️ Ojo: "+urgent.length+" producto"+(urgent.length>1?"s":"")+" por vencerse</b>"+(vv?"<div class='red'><b>🚫 "+vv+" ya vencido"+(vv>1?"s":"")+": sácalo"+(vv>1?"s":"")+" de la repisa</b></div>":"")+"<div class='mut'>"+urgent.map(function(i){return esc(i.name)}).join(", ")+"</div>";
+  }else{
+    b.className="card banner ok";
+    b.innerHTML="<b>✅ Todo al día</b><div class='mut'>"+(items.length?"Nada vence en los próximos "+S.days+" días.":"Agrega tu primer producto en la pestaña ➕")+"</div>";
+  }
+  $("lista").innerHTML=items.filter(function(i){var q=$("q").value.trim().toLowerCase();return !q||i.name.toLowerCase().indexOf(q)>-1||i.loc.toLowerCase()===q}).map(function(i){
+    var st=status(diff(i.exp));var warn=diff(i.exp)<=S.days;
+    return "<div class='card'><div class='top'><b>"+esc(i.name)+(i.offer?" 🏷️":"")+"</b><span class='badge "+st[1]+"'>"+st[0]+"</span></div>"+
+    "<div class='mut'>"+fmt(i.exp)+" · "+i.qty+" un. · "+esc(i.loc)+"</div>"+
+    (warn?"<p style='margin:10px 0 6px'>¿Aún te quedan? Ponlas en oferta 🏷️</p><div class='row' style='font-size:14px'><button data-a='offer' data-id='"+i.id+"' class='sec' style='padding:10px 6px'>"+(i.offer?"Quitar oferta":"🏷️ Oferta")+"</button><button data-a='gone' data-id='"+i.id+"' style='padding:10px 6px'>✔ Vendido</button><button data-a='waste' data-id='"+i.id+"' class='sec' style='padding:10px 6px'>🗑 Botado</button></div>"
+     :"<div style='margin-top:8px'><button class='sec' data-a='del' data-id='"+i.id+"' style='padding:6px 10px;font-size:13px'>Quitar</button></div>")+"</div>";
+  }).join("");
+  var names=Object.keys(S.cat).map(function(k){return S.cat[k]}).concat(SEED);
+  var seen={};$("sug").innerHTML=names.filter(function(n){if(seen[n])return false;seen[n]=1;return true}).map(function(n){return "<option value='"+esc(n)+"'>"}).join("");
+  $("catInfo").textContent=Object.keys(S.cat).length+" producto(s) aprendidos por escaneo.";
+  $("daysBefore").value=String(S.days);
+  var so=S.sold||0,w=S.waste||0;
+  $("stats").textContent="Vendidos a tiempo: "+so+" un. · Botados: "+w+" un."+((so+w)?" · Merma: "+Math.round(w*100/(so+w))+"%":"");
+}
+$("lista").addEventListener("click",function(e){
+  var t=e.target.closest("button");if(!t)return;var id=t.dataset.id;
+  var a=t.dataset.a,snap=JSON.stringify(S),hit=null;
+  S.items.forEach(function(i){if(String(i.id)!==id)return;
+    hit=i;if(a==="offer")i.offer=!i.offer;
+    if(a==="gone")S.sold=(S.sold||0)+i.qty;
+    if(a==="waste")S.waste=(S.waste||0)+i.qty});
+  if(a!=="offer")S.items=S.items.filter(function(i){return String(i.id)!==id});
+  save();render();toast({offer:"Oferta cambiada",gone:"Vendido ✔",waste:"Botado",del:"Producto quitado"}[a],snap);if(window.FB&&hit)FB.act(a,hit);
+});
+document.querySelectorAll("nav button").forEach(function(b){b.onclick=function(){
+  document.querySelectorAll("nav button").forEach(function(x){x.classList.toggle("on",x===b)});
+  ["hoy","add","cfg"].forEach(function(v){$("v-"+v).classList.toggle("hide",v!==b.dataset.v)});
+  if(b.dataset.v!=="add")stopScan();
+}});
+$("code").addEventListener("input",function(){var n=S.cat[$("code").value.trim()];if(n){$("name").value=n;autoLife($("code").value.trim());$("scanMsg").textContent="✅ Producto conocido: "+n}});
+$("save").onclick=function(){
+  var c=$("code").value.trim(),n=$("name").value.trim(),e=$("exp").value,q=parseInt($("qty").value)||1;
+  if(!n||!e){$("scanMsg").textContent="Falta el nombre o la fecha de vencimiento.";return}
+  var snap=JSON.stringify(S);if(c){S.cat[c]=n;S.life=S.life||{};S.life[c]=diff(e)}
+  var it={id:Date.now(),code:c,name:n,exp:e,qty:q,loc:curLoc};S.items.push(it);if(window.FB){FB.add(it);if(c)FB.cat(c,n)}
+  save();["code","name","exp","expt"].forEach(function(i){$(i).value=""});showExp();$("qty").value=1;
+  $("scanMsg").textContent="Guardado ✔ Siguiente producto";render();toast("Guardado: "+n,snap);if(usedScan)$("btnScan").onclick();
+};
+var stream=null,timer=null;
+function stopScan(){if(timer)clearInterval(timer);timer=null;if(stream){stream.getTracks().forEach(function(t){t.stop()});stream=null}$("vid").classList.add("hide")}
+$("btnScan").onclick=function(){
+  if(!("BarcodeDetector" in window)){$("scanMsg").textContent="Este navegador no puede escanear. Prueba con Chrome en Android o escribe el código a mano.";return}
+  navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}}).then(function(s){
+    stream=s;var v=$("vid");v.srcObject=s;v.classList.remove("hide");v.play();
+    var det=new BarcodeDetector({formats:["ean_13","ean_8","upc_a","upc_e","code_128"]});
+    $("scanMsg").textContent="Apunta al código de barras…";
+    timer=setInterval(function(){det.detect(v).then(function(r){
+      if(r.length){$("code").value=r[0].rawValue;usedScan=true;stopScan();
+        var n=S.cat[r[0].rawValue];
+        if(n){$("name").value=n;autoLife(r[0].rawValue);if(!(S.life&&S.life[r[0].rawValue]>0))$("expt").focus();$("scanMsg").textContent="✅ "+n+(S.life&&S.life[r[0].rawValue]>0?" · fecha propuesta: revísala y guarda":". Pon la fecha.")}
+        else{$("scanMsg").textContent="Producto nuevo 🆕 Buscando en la base…"; $("name").focus();lookup(r[0].rawValue)}
+      }}).catch(function(){})},400);
+  }).catch(function(){$("scanMsg").textContent="No pude abrir la cámara. Revisa el permiso."});
+};
+$("daysBefore").onchange=function(){S.days=+$("daysBefore").value;save();render()};
+$("reset").onclick=function(){if(confirm("¿Borrar todo?")){S={items:[],cat:{},days:2};save();render()}};
+$("btnNotif").onclick=function(){
+  if(!("Notification" in window)){alert("Este navegador no soporta notificaciones.");return}
+  Notification.requestPermission().then(function(p){
+    if(p==="granted"){var u=S.items.filter(function(i){return diff(i.exp)<=S.days});
+      new Notification("Mi Almacén",{body:u.length?u.length+" producto(s) por vencerse: "+u.map(function(i){return i.name}).join(", "):"Notificaciones activadas ✔"})}
+  });
+};
+var curLoc="Tienda",usedScan=false;
+function setLoc(l){curLoc=l;S.loc=l;document.querySelectorAll("#locb button").forEach(function(b){b.classList.toggle("on",b.dataset.l===l)})}
+$("locb").addEventListener("click",function(e){var l=e.target.dataset.l;if(l){setLoc(l);save()}});
+function iso(d){return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2)}
+function showExp(){var v=$("exp").value;$("expmsg").textContent=v?"\u2714 "+fmt(v)+" \u00b7 "+(diff(v)<0?"\u00a1ya vencido!":"en "+diff(v)+" d\u00edas"):""}
+function setDays(n){var x=today();x.setDate(x.getDate()+n);$("exp").value=iso(x);$("expt").value=fmt(iso(x));showExp()}
+function parseExp(t){var s=t.replace(/\D/g,""),d,m,y;
+  if(s.length===6||s.length===8){d=+s.slice(0,2);m=+s.slice(2,4);y=+s.slice(4);if(y<100)y+=2000}
+  else if(s.length===4){m=+s.slice(0,2);y=2000+(+s.slice(2));d=new Date(y,m,0).getDate()}
+  else return "";
+  var x=new Date(y,m-1,d);if(m<1||m>12||x.getMonth()!==m-1||x.getDate()!==d)return "";return iso(x)}
+$("expt").addEventListener("input",function(){$("exp").value=parseExp(this.value);showExp()});
+function lookup(c){
+  if(window.FB){FB.getCat(c).then(function(n){if(n&&$("code").value.trim()===c&&!$("name").value){$("name").value=n;$("scanMsg").textContent="\u2705 "+n+" (cat\u00e1logo compartido). Pon la fecha.";$("expt").focus()}else lookupOFF(c)}).catch(function(){lookupOFF(c)});return}
+  lookupOFF(c)}
+function lookupOFF(c){
+  function miss(){if($("code").value.trim()===c&&!$("name").value)$("scanMsg").textContent="Producto nuevo \ud83c\udd95 Escribe el nombre y la fecha."}
+  if(!navigator.onLine||!/^\d{8,14}$/.test(c)){miss();return}
+  var ctl=window.AbortController?new AbortController():null,tm=setTimeout(function(){if(ctl)ctl.abort()},5000);
+  fetch("https://world.openfoodfacts.org/api/v2/product/"+c+".json?fields=product_name,brands,quantity",ctl?{signal:ctl.signal}:{})
+  .then(function(r){return r.json()}).then(function(j){clearTimeout(tm);
+    var p=j&&j.status===1&&j.product;if(!p){miss();return}
+    if($("code").value.trim()!==c||$("name").value)return;
+    var n=[p.product_name,(p.brands||"").split(",")[0],p.quantity].filter(Boolean).join(" ").trim();
+    if(n){$("name").value=n;$("scanMsg").textContent="\ud83c\udf10 Encontr\u00e9: "+n+". Revisa y pon la fecha.";$("expt").focus()}else miss()
+  }).catch(miss)}
+function autoLife(c){if(S.life&&S.life[c]>0)setDays(S.life[c])}
+$("quick").addEventListener("click",function(e){var d=e.target.dataset.d;if(d)setDays(+d)});
+$("tund").onclick=function(){if(undoSnap){var bf=S.items;S=JSON.parse(undoSnap);save();setLoc(S.loc||"Tienda");render();if(window.FB)FB.resync(bf,S.items)}$("toast").style.display="none"};
+$("bk").onclick=function(){var t=JSON.stringify(S);try{navigator.clipboard.writeText(t).then(function(){alert("Respaldo copiado ✔ Pégalo en un chat o nota para guardarlo.")})}catch(e){prompt("Copia este texto:",t)}};
+$("rs").onclick=function(){var t=prompt("Pega aquí tu respaldo:");if(!t)return;try{var o=JSON.parse(t);if(o&&o.items){S=o;save();render();alert("Restaurado ✔")}}catch(e){alert("Ese texto no es un respaldo válido.")}};
+function lockCheck(){if(S.pin){$("lock").style.display="flex";$("pin").value="";$("lockMsg").textContent=""}}
+$("unlock").onclick=function(){if(btoa($("pin").value)===S.pin){$("lock").style.display="none"}else{$("lockMsg").textContent="PIN incorrecto"}};
+$("setPin").onclick=function(){var p=prompt("Nuevo PIN de 4 números (vacío = quitar PIN):");if(p===null)return;if(p===""){delete S.pin}else if(/^\d{4}$/.test(p)){S.pin=btoa(p)}else{alert("Deben ser 4 números.");return}save();alert(S.pin?"PIN activado 🔒":"PIN quitado")};
+$("q").addEventListener("input",render);
+document.addEventListener("visibilitychange",function(){if(document.hidden)lockCheck()});
+load();setLoc(S.loc||"Tienda");render();lockCheck();
+try{if("Notification" in window&&Notification.permission==="granted"){var k=today().toDateString();var u=S.items.filter(function(i){return diff(i.exp)<=S.days});if(S.lastN!==k&&u.length){new Notification("Mi Almacén",{body:u.length+" producto(s) por vencerse: "+u.map(function(i){return i.name}).join(", ")});S.lastN=k;save()}}}catch(e){}
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(function(){});
+</script>
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
+import {getAuth,signInAnonymously} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
+import {initializeFirestore,persistentLocalCache,doc,setDoc,getDoc,updateDoc,deleteDoc,collection,onSnapshot} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
+var VAPID="BCdQuR3-GSb1cRo3KehbkVn8vpN8RuNl6fg7Pvk-F-ZoaQCJrG8oya8s_q7RBvupHlBKvCHR8bK3edLpAhHQLTE";
+var app=initializeApp({apiKey:"AIzaSyCtAqzIu0mB-qKYlNn1sPNxnzfA4H2uk0k",authDomain:"mi-almacen-f2231.firebaseapp.com",projectId:"mi-almacen-f2231",storageBucket:"mi-almacen-f2231.firebasestorage.app",messagingSenderId:"789021754483",appId:"1:789021754483:web:87155a8a1d562f21205606"});
+var auth=getAuth(app),db=initializeFirestore(app,{localCache:persistentLocalCache()});
+var el=function(i){return document.getElementById(i)};
+var sid="";try{sid=localStorage.getItem("almacen-sid")||""}catch(e){}
+var uid=null,unsub=null;
+var ready=auth.authStateReady().then(function(){return auth.currentUser||signInAnonymously(auth)}).then(function(){uid=auth.currentUser&&auth.currentUser.uid}).catch(function(){});
+function clean(o){return JSON.parse(JSON.stringify(o))}
+function idoc(id){return doc(db,"stores",sid,"items",String(id))}
+function msg(t){var e=el("stSt");if(e)e.textContent=t}
+var okCode=function(c){return /^[\w-]{4,30}$/.test(c)};
+window.FB={
+ on:function(){return !!sid},
+ add:function(it){if(!sid)return;setDoc(idoc(it.id),Object.assign(clean(it),{st:"active",ts:Date.now()})).catch(function(){})},
+ act:function(a,it){if(!sid)return;updateDoc(idoc(it.id),a==="offer"?{offer:!!it.offer}:{st:a==="gone"?"sold":a==="waste"?"waste":"del",ts:Date.now()}).catch(function(){})},
+ resync:function(bf,af){if(!sid)return;var m={},k={};bf.forEach(function(i){m[i.id]=JSON.stringify(i)});
+  af.forEach(function(i){k[i.id]=1;if(m[i.id]!==JSON.stringify(i))FB.add(i)});
+  bf.forEach(function(i){if(!k[i.id])deleteDoc(idoc(i.id)).catch(function(){})})},
+ cat:function(c,n){if(okCode(c))setDoc(doc(db,"catalog",c),{name:n}).catch(function(){})},
+ getCat:function(c){if(!okCode(c))return Promise.resolve(null);
+  return Promise.race([getDoc(doc(db,"catalog",c)).then(function(d){return d.exists()?d.data().name:null}),new Promise(function(r){setTimeout(function(){r(null)},3500)})])}
+};
+function listen(){if(unsub)unsub();unsub=null;if(!sid)return;
+ unsub=onSnapshot(collection(db,"stores",sid,"items"),function(sn){
+  var it=[],so=0,w=0;
+  sn.forEach(function(d){var x=d.data();
+   if(x.st==="sold")so+=x.qty||1;else if(x.st==="waste")w+=x.qty||1;
+   else if(x.st==="active"||!x.st){if(x.code)S.cat[x.code]=x.name;it.push({id:x.id,code:x.code||"",name:x.name,exp:x.exp,qty:x.qty||1,loc:x.loc||"Tienda",offer:!!x.offer})}});
+  S.items=it;S.sold=so;S.waste=w;save();render();
+  msg(sn.metadata.hasPendingWrites||sn.metadata.fromCache?"\u23f3 Sin conexi\u00f3n: se enviar\u00e1 cuando vuelva internet":"\u2714 Sincronizado")
+ },function(){msg("No pude conectar con el almac\u00e9n")})}
+function join(c){sid=c;try{localStorage.setItem("almacen-sid",c)}catch(e){}
+ S.items.slice().forEach(function(i){FB.add(i)});listen();ui()}
+function mk(){var A="ABCDEFGHJKMNPQRSTUVWXYZ23456789",r=crypto.getRandomValues(new Uint8Array(8)),s="";for(var i=0;i<8;i++)s+=A[r[i]%31];return s}
+function swReady(){return navigator.serviceWorker.register("sw.js").then(function(reg){
+ if(reg.active)return reg;var w=reg.installing||reg.waiting;if(!w)return navigator.serviceWorker.ready;
+ return new Promise(function(res,rej){w.addEventListener("statechange",function(){if(w.state==="activated")res(reg);if(w.state==="redundant")rej("La instalaci\u00f3n de la app fall\u00f3 en este celular. Borra los datos del sitio y reintenta.")})})})}
+function push(){
+ var to=function(p,ms,m){return Promise.race([p,new Promise(function(_,rej){setTimeout(function(){rej(m)},ms)})])};
+ msg("1/3 Pidiendo permiso\u2026");
+ import("https://www.gstatic.com/firebasejs/13.2.0/firebase-messaging.js").then(function(M){
+  return M.isSupported().then(function(ok){
+   if(!ok)throw"Este celular no soporta avisos push.";
+   if(Notification.permission==="denied")throw"Las notificaciones est\u00e1n bloqueadas. Ve a Ajustes de Android \u2192 Apps \u2192 Chrome \u2192 Notificaciones y act\u00edvalas.";
+   return to(Notification.requestPermission(),30000,"No apareci\u00f3 la pregunta de permiso. Toca el candado \ud83d\udd12 junto a la direcci\u00f3n \u2192 Permisos \u2192 Notificaciones \u2192 Permitir. Luego toca el bot\u00f3n otra vez.")})
+  .then(function(p){if(p!=="granted")throw"Sin permiso de notificaciones.";msg("2/3 Preparando la app\u2026");
+   return to(swReady(),15000,"La app no termin\u00f3 de instalarse en este celular. Borra los datos del sitio (candado \ud83d\udd12 \u2192 Configuraci\u00f3n del sitio) y reintenta.")})
+  .then(function(reg){msg("3/3 Conectando con el servidor de avisos\u2026");
+   return to(M.getToken(M.getMessaging(app),{vapidKey:VAPID,serviceWorkerRegistration:reg}),25000,"Tard\u00f3 demasiado. Revisa tu internet y toca el bot\u00f3n otra vez.")})})
+ .then(function(t){if(!t)throw"No pude activar los avisos.";return setDoc(doc(db,"stores",sid,"devices",t.slice(-20)),{token:t,uid:uid,ts:Date.now()})})
+ .then(function(){msg("\u2714 Avisos activados en este celular")}).catch(function(e){msg(typeof e==="string"?e:"No pude activar los avisos ("+(e&&e.code?e.code:"error")+"). Reintenta.")})}
+function ui(){var b=el("storeBody");
+ if(sid){b.innerHTML='<p class="mut">C\u00f3digo de tu almac\u00e9n (comp\u00e1rtelo con tus empleados):</p><div style="font-size:30px;font-weight:800;letter-spacing:3px;text-align:center;margin:8px 0">'+sid.slice(0,4)+'-'+sid.slice(4)+'</div><p class="mut" id="stSt"></p><button id="btnPush" style="width:100%;margin-top:8px">\ud83d\udd14 Avisos con el celular bloqueado</button><button class="sec" id="stOut" style="width:100%;margin-top:8px">Salir de este almac\u00e9n</button>';
+  el("btnPush").onclick=push;
+  el("stOut").onclick=function(){if(!confirm("\u00bfSalir de este almac\u00e9n? Este celular dejar\u00e1 de sincronizar."))return;if(unsub)unsub();unsub=null;sid="";try{localStorage.removeItem("almacen-sid")}catch(e){}ui()}}
+ else{b.innerHTML='<p class="mut">Con un c\u00f3digo, todos los celulares ven lo mismo: si alguien marca Vendido, el aviso desaparece para todos.</p><button id="stNew" style="width:100%">Crear mi almac\u00e9n</button><input id="stCode" placeholder="Tengo un c\u00f3digo (ej: K7P2-9QXM)" style="margin-top:10px;text-transform:uppercase"><button class="sec" id="stJoin" style="width:100%;margin-top:8px">Unirme con c\u00f3digo</button><p class="mut" id="stSt"></p>';
+  el("stNew").onclick=function(){if(!navigator.onLine){msg("Necesito internet para crear el almac\u00e9n.");return}msg("Creando\u2026");
+   ready.then(function(){var c=mk();return setDoc(doc(db,"stores",c),{owner:uid,ts:Date.now()}).then(function(){join(c)})}).catch(function(){msg("No pude crearlo. Intenta de nuevo.")})};
+  el("stJoin").onclick=function(){var c=el("stCode").value.toUpperCase().replace(/[^A-Z0-9]/g,"");
+   if(c.length!==8){msg("El c\u00f3digo tiene 8 letras y n\u00fameros.");return}
+   if(!navigator.onLine){msg("Necesito internet para unirme.");return}msg("Buscando\u2026");
+   ready.then(function(){return getDoc(doc(db,"stores",c))}).then(function(d){if(d.exists())join(c);else msg("Ese c\u00f3digo no existe.")}).catch(function(){msg("No pude conectar. Intenta de nuevo.")})}}}
+ui();if(sid)listen();
+</script>
+</body>
+</html>
