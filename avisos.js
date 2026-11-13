@@ -9,6 +9,8 @@ const dif = (exp, h) => Math.round((Date.parse(exp + "T00:00:00Z") - Date.parse(
   const h = hoy();
   const stores = await db.collection("stores").listDocuments();
   for (const s of stores) {
+    const st = (await s.get()).data();
+    if (!st || !st.paidUntil || st.paidUntil.toMillis() < Date.now()) continue;
     const items = (await s.collection("items").where("st", "==", "active").get()).docs.map(d => d.data());
     const urg = items.filter(i => dif(i.exp, h) <= DIAS);
     if (!urg.length) continue;
