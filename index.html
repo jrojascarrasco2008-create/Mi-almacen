@@ -96,7 +96,7 @@ details summary{cursor:pointer;padding:6px 0}
 <p><b>Qué datos guardamos</b><br>Del dueño: nombre y correo. De los empleados: nombre. De cada almacén: productos, cantidades, fechas de vencimiento y un historial de quién agregó, vendió o botó algo, y a qué hora. De cada celular: un código técnico para enviarle los avisos.</p>
 <p><b>Para qué</b><br>Para que la app funcione: sincronizar los celulares del almacén, avisar los vencimientos, mostrar el historial y administrar la prueba y el plan. No vendemos tus datos ni los usamos para publicidad.</p>
 <p><b>Quién los ve</b><br>El dueño y los empleados aprobados de ese almacén. El catálogo compartido guarda solo el código de barras y el nombre del producto, nunca datos de personas.</p>
-<p><b>Dónde</b><br>En servidores de Google (Firebase), en São Paulo, Brasil.</p>
+<p><b>Dónde</b><br>En servidores de Google (Firebase), en Santiago, Chile.</p>
 <p><b>Cuánto tiempo</b><br>Mientras exista tu almacén. Si lo eliminas, se borra todo: productos, historial, personas y celulares.</p>
 <p><b>Tus derechos</b><br>Puedes pedir acceder a tus datos, corregirlos o eliminarlos. El dueño puede eliminar el almacén y todos sus datos desde Ajustes. Un empleado puede salir desde Ajustes: se quita su nombre de la lista, pero el historial de lo que hizo queda en el almacén mientras este exista. También puedes pedirlo por el contacto de arriba.</p>
 <p><b>Condiciones</b><br>La prueba dura 30 días. Después, el almacén necesita un plan activo; si no, la app se bloquea hasta que el dueño lo active, y tus datos no se borran por eso. El valor del plan se informará antes de que termine la prueba. La app es una ayuda: los avisos pueden fallar o llegar atrasados, así que sigue revisando tus productos. Tú eres responsable de lo que vendes.</p>
@@ -267,7 +267,7 @@ import {initializeApp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-
 import {getAuth,signInAnonymously,signOut,EmailAuthProvider,linkWithCredential,signInWithEmailAndPassword,deleteUser} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
 import {initializeFirestore,persistentLocalCache,doc,setDoc,getDoc,getDocs,updateDoc,deleteDoc,deleteField,writeBatch,addDoc,collection,query,where,orderBy,limit,onSnapshot,serverTimestamp,Timestamp} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
 var VAPID="BCdQuR3-GSb1cRo3KehbkVn8vpN8RuNl6fg7Pvk-F-ZoaQCJrG8oya8s_q7RBvupHlBKvCHR8bK3edLpAhHQLTE";
-var CONTACTO_WA="";   // TU WhatsApp con código de país y sin signos, ej: 56912345678
+var CONTACTO_WA="56989774093";   // TU WhatsApp con código de país y sin signos, ej: 56912345678
 var TRIAL_DIAS=30,MAX_PERSONAS=4;
 var RESPONSABLE="Mi Almacén";   // nombre de la persona o empresa responsable de los datos
 var app=initializeApp({apiKey:"AIzaSyCtAqzIu0mB-qKYlNn1sPNxnzfA4H2uk0k",authDomain:"mi-almacen-f2231.firebaseapp.com",projectId:"mi-almacen-f2231",storageBucket:"mi-almacen-f2231.firebasestorage.app",messagingSenderId:"789021754483",appId:"1:789021754483:web:87155a8a1d562f21205606"});
