@@ -1,0 +1,25 @@
+name: Activar plan
+on:
+  workflow_dispatch:
+    inputs:
+      correo:
+        description: "Correo del dueño del almacén"
+        required: true
+      dias:
+        description: "Días a sumar (ej: 30)"
+        required: true
+        default: "30"
+jobs:
+  activar:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - run: npm install firebase-admin@12
+      - run: node activar.js
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          CORREO: ${{ github.event.inputs.correo }}
+          DIAS: ${{ github.event.inputs.dias }}
