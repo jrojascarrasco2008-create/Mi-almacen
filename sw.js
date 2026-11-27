@@ -1,4 +1,4 @@
-var V="almacen-v4";var F=["./","./index.html","./manifest.json","./icono-192.png","./icono-512.png"];
+var V="almacen-v5";var F=["./","./index.html","./manifest.json","./icono-192.png","./icon-512.png"];
 self.addEventListener("install",function(e){e.waitUntil(caches.open(V).then(function(c){return Promise.all(F.map(function(u){return c.add(u).catch(function(){})}))}));self.skipWaiting()});
 self.addEventListener("activate",function(e){e.waitUntil(caches.keys().then(function(k){return Promise.all(k.filter(function(x){return x!==V}).map(function(x){return caches.delete(x)}))}).then(function(){return self.clients.claim()}))});
 self.addEventListener("fetch",function(e){var u=new URL(e.request.url);
